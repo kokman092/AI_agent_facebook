@@ -1,0 +1,40 @@
+name: Facebook Auto Poster
+
+on:
+  schedule:
+    # Runs every 4 hours: at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC
+    - cron: '0 0,4,8,12,16,20 * * *'
+  # Also allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed to commit the updated content bank back to the repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run the Facebook poster
+        env:
+          FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+        run: python post_once.py
+
+      - name: Commit updated content bank
+        run: |
+          git config --global user.name "Facebook AI Bot"
+          git config --global user.email "bot@github.com"
+          git add facebook_image_content_bank.jsonl
+          git diff --staged --quiet || git commit -m "🤖 Bot: consume post from content bank"
+          git push
